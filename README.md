@@ -1,77 +1,62 @@
-# Smart VPN Gateway & WireGuard Opsætning til Apple TV
+# Smart VPN Gateway til Apple TV
 
-Denne dokumentation beskriver den komplette opsætning af Raspberry Pi 4 som en transparent, intelligent VPN-gateway for Apple TV med NordVPN WireGuard (NordLynx).
+Dette repository indeholder en transparent, intelligent VPN-gateway til Raspberry Pi (og andre Linux-enheder) med NordVPN WireGuard (NordLynx).
+
+Opsætningen gør, at dit Apple TV automatisk dirigerer specifikke streamingtjenester gennem relevante lande via VPN – **helt uden brug af apps på Apple TV'et**, og uden at påvirke almindelig streaming.
 
 ---
 
-## 1. Systemoversigt og Arkitektur
+## 1. Sådan fungerer det (Trafikflow)
 
-Formålet med denne opsætning er, at Apple TV automatisk dirigerer specifikke streamingtjenester gennem relevante lande via VPN – **helt uden brug af apps på Apple TV'et**, og uden at påvirke almindelig streaming.
-
-### Trafikflow
+Der kører **én enkelt Docker-container** (`smart-gateway` baseret på `sing-box`), som fungerer som en intelligent trafikbetjent for dit Apple TV:
 
 ```mermaid
 flowchart TD
-    AppleTV["Apple TV"] -->|Gateway & DNS: 192.168.68.136| RPi["Raspberry Pi 4 (Smart Gateway)<br/>sing-box / tun0"]
+    AppleTV["Apple TV"] -->|Gateway & DNS: 192.168.68.136| RPi["Raspberry Pi (Smart Gateway)<br/>sing-box container"]
     
-    RPi -->|"youtube.com, googlevideo.com, youtu.be"| Albanien["NordVPN WireGuard (Albanien)<br/>Reklamefrit YouTube"]
-    RPi -->|"svt.se, svtplay.se, svtid.se"| Sverige["NordVPN WireGuard (Sverige)<br/>SVT Play omgår geoblokering"]
+    RPi -->|"youtube.com, googlevideo.com, youtu.be"| Albanien["NordVPN WireGuard (Albanien)<br/>- Reklamefrit YouTube"]
+    RPi -->|"svt.se, svtplay.se, svtid.se"| Sverige["NordVPN WireGuard (Sverige)<br/>- SVT Play omgår geoblokering"]
     RPi -->|"dr.dk"| Danmark["NordVPN WireGuard (Danmark)"]
     RPi -->|"AirPlay, HomeKit (Privat IP)"| LAN["Lokalt netværk (Direkte)"]
-    RPi -->|"Netflix, Disney+, Apple TV+, øvrigt"| WAN["Direkte internet<br/>Fuld hastighed, ingen VPN-blokering"]
+    RPi -->|"Netflix, Disney+, Apple TV+, øvrigt"| WAN["Direkte internet<br/>- Fuld hastighed, ingen VPN-blokering"]
 ```
 
 ---
 
-## 2. Hvad der er installeret på Raspberry Pi'en
+## 2. Projektstruktur
 
-1. **Styresystem & Netværkskerne:**
-   - **OS:** Debian GNU/Linux 13 (trixie), aarch64 (Raspberry Pi 4).
-   - **IP-adresse:** `192.168.68.136` (på `wlan0`).
-   - **WireGuard kernemodul:** Indlæst i Linux-kernen.
-   - **IP Forwarding:** Slået til og gjort permanent i `/etc/sysctl.d/99-ip-forward.conf`:
-     ```ini
-     net.ipv4.ip_forward = 1
-     ```
-
-2. **Docker & Docker Compose:**
-   - **Docker Engine:** `v29.9.1` (Community Edition).
-   - **Docker Compose:** `v5.6.0`.
-   - Brugeren `cp` er tilføjet til gruppen `docker`.
-   - `docker.service` er aktiveret og starter automatisk ved systemboot.
-
-3. **Smart Gateway (sing-box):**
-   - Kører som container via Docker i mappen [`/home/cp/wireguard/smart-gateway/`](file:///home/cp/wireguard/smart-gateway).
-   - Opretter et virtuelt `tun0`-interface med `auto_redirect: true` og `hijack-dns`.
-   - Forbindes direkte til NordVPN's WireGuard-servere i Albanien, Danmark og Sverige.
-   - Sniffer automatisk SNI (domæner) på HTTPS-trafik og dirigerer pakker efter regelsættet.
-
-4. **Konfigurations- og Hjælpescripts:**
-   - [`/home/cp/wireguard/generate-nordvpn-configs.py`](file:///home/cp/wireguard/generate-nordvpn-configs.py): Python-script, der automatisk kontakter NordVPN API via et Access Token, udtrækker `nordlynx_private_key`, finder de hurtigste servere for Albanien, Danmark og Sverige, og opdaterer konfigurationsfilerne.
-
----
-
-## 3. Mappestruktur og Filer
-
-Projektet er placeret i [`/home/cp/wireguard/`](file:///home/cp/wireguard):
+Projektet er helt simpelt og består af få filer:
 
 ```text
-/home/cp/wireguard/
-├── README.md                           # Denne dokumentation
-├── docker-compose.yml                  # Original opsætning til 3 separate WireGuard containere
-├── generate-nordvpn-configs.py         # Automatisk konfigurationsgenerator fra NordVPN token
-├── config/                             # Konfigurationsfiler til separate WireGuard containere
-│   ├── albanien/wg0.conf
-│   ├── danmark/wg0.conf
-│   └── sverige/wg0.conf
-└── smart-gateway/                      # DEN AKTIVE SMART GATEWAY TIL APPLE TV
-    ├── docker-compose.yml              # Docker Compose for sing-box containeren
-    └── config.json                     # Routing-regler, DNS og WireGuard endpoints
+├── docker-compose.yml              # Starter Smart Gateway containeren (sing-box)
+├── config.example.json             # Skabelon for konfigurationen (uden private nøgler)
+├── config.json                     # Din aktive konfiguration (bliver genereret, udeladt fra git)
+├── generate-nordvpn-configs.py     # Henter NordVPN nøgler og opretter config.json automatisk
+├── setup.sh                        # 1-klik installationsscript til nye enheder
+└── README.md                       # Denne vejledning
 ```
 
 ---
 
-## 4. Konfiguration af Apple TV
+## 3. Hurtig installation på en ny enhed (f.eks. Pi 3 eller Pi 4)
+
+Kør blot følgende 3 kommandoer i terminalen:
+
+```bash
+git clone https://github.com/cccp200/smart-vpn-gateway.git
+cd smart-vpn-gateway
+./setup.sh
+```
+
+Scriptet:
+1. Installerer automatisk Docker og Docker Compose, hvis det mangler.
+2. Aktiverer permanent IP-forwarding i Linux-kernen.
+3. Beder om dit NordVPN Access Token og genererer automatisk `config.json`.
+4. Starter gatewayen via `docker compose up -d`.
+
+---
+
+## 4. Konfiguration af dit Apple TV
 
 På dit Apple TV skal du **ikke** installere nogen apps. Du ændrer blot netværksindstillingerne én gang:
 
@@ -80,66 +65,48 @@ På dit Apple TV skal du **ikke** installere nogen apps. Du ændrer blot netvær
 3. Vælg **Konfigurer IP** (*Configure IP*) $\rightarrow$ Skift fra *Automatisk* til **Manuelt**:
    - **IP-adresse:** Behold Apple TV'ets nuværende IP (f.eks. `192.168.68.xxx`).
    - **Undernetmaske:** `255.255.255.0`
-   - **Router (Gateway):** **`192.168.68.136`** *(Raspberry Pi)*
+   - **Router (Gateway):** Din Raspberry Pi's IP-adresse (f.eks. `192.168.68.136`).
 4. Vælg **Konfigurer DNS** (*Configure DNS*) $\rightarrow$ Skift fra *Automatisk* til **Manuelt**:
-   - **DNS-server:** **`192.168.68.136`** *(Raspberry Pi)*
+   - **DNS-server:** Din Raspberry Pi's IP-adresse (f.eks. `192.168.68.136`).
 5. Gem og afslut.
 
 ---
 
 ## 5. Vigtig anbefaling: Faste IP-adresser på Routeren
 
-Da Apple TV har `192.168.68.136` indtastet fast som gateway:
+Da Apple TV har Raspberry Pi'ens IP-adresse indtastet som fast gateway:
 
 > [!IMPORTANT]
 > **Reserver Raspberry Pi'ens IP-adresse i din router:**
-> Hvis routeren genstarter og giver Raspberry Pi'en en anden IP (f.eks. `192.168.68.150`), mister dit Apple TV internetforbindelsen.
+> Hvis routeren genstarter og giver Raspberry Pi'en en anden IP, mister dit Apple TV internetforbindelsen.
 >
 > **Reserver også Apple TV'ets IP-adresse i routeren:**
-> Da Apple TV nu kører med manuel IP, forhindrer en DHCP-reservation, at routeren ved en fejl tildeler den samme IP-adresse til en anden enhed på netværket.
+> Da Apple TV nu kører med manuel IP, forhindrer en DHCP-reservation, at routeren ved en fejl tildeler samme IP-adresse til en anden enhed på netværket.
 
-*Tip:* Hvis du bruger **TP-Link Deco** (som standard bruger `192.168.68.x`):
+*Tip for TP-Link Deco brugere:*
 - Åbn **Deco-appen** $\rightarrow$ **Mere** (*More*) $\rightarrow$ **Avanceret** (*Advanced*) $\rightarrow$ **Adressedefinition / Reservation** (*Address Reservation*).
 - Tilføj både **Raspberry Pi** og **Apple TV**.
 
 ---
 
-## 6. Drift, Overvågning og Kommandoer
+## 6. Daglige kommandoer
 
-### Se live routing-logs
-Du kan se trafikken i realtid, når du bruger Apple TV:
+### Se live trafiklogs (her kan du se, hvilken VPN der vælges i realtid):
 ```bash
-cd /home/cp/wireguard/smart-gateway
-sudo docker compose logs -f
+docker compose logs -f
 ```
 
-### Genstart gatewayen
+### Genstart gatewayen:
 ```bash
-cd /home/cp/wireguard/smart-gateway
-sudo docker compose restart
+docker compose restart
 ```
 
-### Stop gatewayen (hvis du midlertidigt vil slå den fra)
+### Stop gatewayen:
 ```bash
-cd /home/cp/wireguard/smart-gateway
-sudo docker compose down
+docker compose down
 ```
 
-### Tilføj et nyt domæne eller en ny app
-Hvis du vil have en ny tjeneste dirigeret gennem en bestemt VPN:
-1. Rediger [`/home/cp/wireguard/smart-gateway/config.json`](file:///home/cp/wireguard/smart-gateway/config.json).
-2. Tilføj domænet under `domain_suffix` for det ønskede land i `rules`-sektionen.
-3. Genstart containeren:
-   ```bash
-   cd /home/cp/wireguard/smart-gateway && sudo docker compose restart
-   ```
-
-### Opdatering af NordVPN Token i fremtiden
-Hvis dit token på et tidspunkt udløber, eller du vil hente nye anbefalede servere fra NordVPN:
-```bash
-cd /home/cp/wireguard
-python3 generate-nordvpn-configs.py
-cd /home/cp/wireguard/smart-gateway
-sudo docker compose restart
-```
-Scriptet henter automatisk friske nøgler og opdaterer både `config.json` og `wg0.conf`-filerne.
+### Tilføj et nyt domæne eller streamingtjeneste:
+1. Rediger `config.json`.
+2. Tilføj domænet under `domain_suffix` for det ønskede land under `rules`.
+3. Genstart containeren: `docker compose restart`.

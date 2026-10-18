@@ -24,8 +24,8 @@ sudo sysctl -w net.ipv4.ip_forward=1 > /dev/null
 echo "net.ipv4.ip_forward = 1" | sudo tee /etc/sysctl.d/99-ip-forward.conf > /dev/null
 echo "[OK] IP-forwarding aktiveret og gjort permanent."
 
-# 3. Kør script til at hente NordVPN nøgler og oprette konfigurationer
-echo "[3/4] Genererer VPN- og Smart Gateway-konfiguration..."
+# 3. Kør script til at hente NordVPN nøgler og oprette konfiguration
+echo "[3/4] Genererer Smart Gateway konfiguration (config.json)..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ -n "$1" ]; then
@@ -36,8 +36,8 @@ fi
 
 # 4. Start Smart Gateway
 echo "[4/4] Starter Smart Gateway containeren..."
-cd "$SCRIPT_DIR/smart-gateway"
-sudo docker compose up -d
+cd "$SCRIPT_DIR"
+docker compose up -d
 
 echo ""
 echo "=========================================================="
@@ -53,5 +53,5 @@ echo "  2. Konfigurer DNS -> Manuelt"
 echo "     - DNS-server: $LOCAL_IP"
 echo ""
 echo "Se live logs med:"
-echo "  cd $SCRIPT_DIR/smart-gateway && sudo docker compose logs -f"
+echo "  cd $SCRIPT_DIR && docker compose logs -f"
 echo "=========================================================="

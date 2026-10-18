@@ -1,6 +1,5 @@
-# Ignorer hemmelige nøgler og specifikke konfigurationer
-config/
-smart-gateway/config.json
+# Ignorer private nøgler og specifikke konfigurationer
+config.json
 *.key
 *.conf
 *.token

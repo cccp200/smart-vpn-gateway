@@ -1,60 +1,14 @@
 services:
-  # WireGuard VPN - Albanien
-  wireguard-albanien:
-    image: lscr.io/linuxserver/wireguard:latest
-    container_name: wireguard-albanien
+  smart-gateway:
+    image: ghcr.io/sagernet/sing-box:latest
+    container_name: smart-gateway
+    restart: unless-stopped
+    network_mode: host
     cap_add:
       - NET_ADMIN
-      - SYS_MODULE
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Copenhagen
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
     volumes:
-      - ./config/albanien:/config
-      - /lib/modules:/lib/modules:ro
-    ports:
-      - "51821:51820/udp"
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    restart: unless-stopped
-
-  # WireGuard VPN - Danmark
-  wireguard-danmark:
-    image: lscr.io/linuxserver/wireguard:latest
-    container_name: wireguard-danmark
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Copenhagen
-    volumes:
-      - ./config/danmark:/config
-      - /lib/modules:/lib/modules:ro
-    ports:
-      - "51822:51820/udp"
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    restart: unless-stopped
-
-  # WireGuard VPN - Sverige
-  wireguard-sverige:
-    image: lscr.io/linuxserver/wireguard:latest
-    container_name: wireguard-sverige
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Copenhagen
-    volumes:
-      - ./config/sverige:/config
-      - /lib/modules:/lib/modules:ro
-    ports:
-      - "51823:51820/udp"
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    restart: unless-stopped
+      - ./config.json:/etc/sing-box/config.json
+    command: run -c /etc/sing-box/config.json

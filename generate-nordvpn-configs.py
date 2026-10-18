@@ -5,7 +5,9 @@ import json
 import urllib.request
 import base64
 
-CONFIG_DIR = "/home/cp/wireguard/config"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
+
 COUNTRIES = {
     "albanien": 2,
     "danmark": 58,
@@ -45,32 +47,7 @@ def get_server_info(country_id):
             "pubkey": pubkey
         }
 
-def write_config(country_name, private_key, server_info):
-    conf_dir = os.path.join(CONFIG_DIR, country_name)
-    os.makedirs(conf_dir, exist_ok=True)
-    conf_path = os.path.join(conf_dir, "wg0.conf")
-    
-    content = f"""[Interface]
-PrivateKey = {private_key}
-Address = 10.5.0.2/32
-DNS = 103.86.96.100, 103.86.99.100
-
-[Peer]
-PublicKey = {server_info['pubkey']}
-AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = {server_info['station']}:51820
-PersistentKeepalive = 25
-"""
-    with open(conf_path, "w") as f:
-        f.write(content)
-    os.chmod(conf_path, 0o600)
-    print(f"[OK] Oprettede {conf_path} ({server_info['name']} - {server_info['hostname']})")
-
 def write_smart_gateway_config(private_key, servers):
-    gw_dir = os.path.join(os.path.dirname(CONFIG_DIR), "smart-gateway")
-    os.makedirs(gw_dir, exist_ok=True)
-    cfg_path = os.path.join(gw_dir, "config.json")
-    
     cfg = {
         "log": {"level": "info", "timestamp": True},
         "dns": {
@@ -155,9 +132,10 @@ def write_smart_gateway_config(private_key, servers):
             "final": "direct"
         }
     }
-    with open(cfg_path, "w") as f:
+    with open(CONFIG_PATH, "w") as f:
         json.dump(cfg, f, indent=2)
-    print(f"[OK] Opdaterede Smart Gateway konfiguration: {cfg_path}")
+    os.chmod(CONFIG_PATH, 0o600)
+    print(f"\n[OK] Oprettede Smart Gateway konfiguration: {CONFIG_PATH}")
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] in ("-h", "--help"):
@@ -176,7 +154,6 @@ def main():
         sys.exit(1)
 
     private_key = None
-    # Tjek om det allerede er en base64-kodet privat nøgle (typisk 44 tegn med '=')
     if len(token_or_key) == 44 and token_or_key.endswith("="):
         private_key = token_or_key
         print("Modtog direkte NordLynx Private Key.")
@@ -195,14 +172,14 @@ def main():
         if not server or not server["pubkey"]:
             print(f"Fejl: Kunne ikke finde WireGuard server for {country_name}", file=sys.stderr)
             continue
-        write_config(country_name, private_key, server)
+        print(f"  -> {server['name']} ({server['hostname']})")
         server_dict[country_name] = server
 
     if len(server_dict) == len(COUNTRIES):
         write_smart_gateway_config(private_key, server_dict)
 
-    print("\nFærdig! Du kan nu køre:")
-    print("  cd /home/cp/wireguard && docker compose up -d")
+    print("\nFærdig! Du kan nu starte/genstarte gatewayen:")
+    print("  docker compose restart (eller docker compose up -d)")
 
 if __name__ == "__main__":
     main()
