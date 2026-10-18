@@ -1,0 +1,15 @@
+# Ignorer hemmelige nøgler og specifikke konfigurationer
+config/
+smart-gateway/config.json
+*.key
+*.conf
+*.token
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# OS filer
+.DS_Store
+Thumbs.db
