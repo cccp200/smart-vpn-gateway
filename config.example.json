@@ -129,7 +129,12 @@
       },
       {
         "domain_suffix": [
-          "dr.dk"
+          "dr.dk",
+          "tv2.dk",
+          "tv2api.dk",
+          "tv2a.dk",
+          "tv2i.dk",
+          "tv2s.dk"
         ],
         "outbound": "danmark"
       }

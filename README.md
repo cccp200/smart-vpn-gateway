@@ -16,7 +16,7 @@ flowchart TD
     
     RPi -->|"youtube.com, googlevideo.com, youtu.be"| Albanien["NordVPN WireGuard (Albanien)<br/>- Reklamefrit YouTube"]
     RPi -->|"svt.se, svtplay.se, svtid.se"| Sverige["NordVPN WireGuard (Sverige)<br/>- SVT Play omgår geoblokering"]
-    RPi -->|"dr.dk"| Danmark["NordVPN WireGuard (Danmark)"]
+    RPi -->|"dr.dk, tv2.dk, tv2api.dk, m.fl."| Danmark["NordVPN WireGuard (Danmark)"]
     RPi -->|"AirPlay, HomeKit (Privat IP)"| LAN["Lokalt netværk (Direkte)"]
     RPi -->|"Netflix, Disney+, Apple TV+, øvrigt"| WAN["Direkte internet<br/>- Fuld hastighed, ingen VPN-blokering"]
 ```

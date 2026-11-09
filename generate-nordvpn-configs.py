@@ -125,7 +125,10 @@ def write_smart_gateway_config(private_key, servers):
                     "outbound": "sverige"
                 },
                 {
-                    "domain_suffix": ["dr.dk"],
+                    "domain_suffix": [
+                        "dr.dk", "tv2.dk", "tv2api.dk",
+                        "tv2a.dk", "tv2i.dk", "tv2s.dk"
+                    ],
                     "outbound": "danmark"
                 }
             ],
